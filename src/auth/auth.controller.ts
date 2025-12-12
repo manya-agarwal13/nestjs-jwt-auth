@@ -22,7 +22,7 @@ interface LoginRequest {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   /**
    * Register a new user
@@ -65,19 +65,20 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  async logout(@Request() req: any) {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return { message: 'No access token provided' };
+  async logout(@Body('email') email: string, @Request() req: any) {
+    if (!email) {
+      return { message: 'Email is required to logout' };
     }
-     // JWT payload uses "sub" by convention (see AuthService.login)
-    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
-    if (!userId) {
-      return { message: 'Unable to determine user id from token payload' };
+    const loggedInUserEmail = req.user?.email;
+
+    if (!loggedInUserEmail) {
+    return { message: 'Unable to extract logged-in user email from token' };
     }
+    
+    const result = await this.authService.logout(email,loggedInUserEmail);
 
-    await this.authService.logout(token, userId);
-
-    return { message: 'Logged out successfully' };
+    return result
+      ? { message: `User with email ${email} logged out successfully` }
+      : { message: `No user found with email ${email}` };
   }
 }

@@ -3,6 +3,7 @@ import {
   ConflictException,
   UnauthorizedException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
@@ -93,6 +94,12 @@ export class AuthService {
     const payload = { sub: user.id, email: user.email };
     const access_token = this.jwt.sign(payload);
 
+    // Store new token in DB
+  await this.prisma.user.update({
+    where: { id: user.id },
+    data: { currentToken: access_token },
+  });
+
     return { access_token };
   }
   
@@ -102,12 +109,33 @@ export class AuthService {
    * @param userId - ID of the user logging out
    * @returns Boolean indicating logout success
    */
-  async logout(token: string, userId: number) {
-    // Optional: log logout action
-    console.log(`User ${userId} logged out at ${new Date()}`);
+  async logout(email: string,loggedInUserEmail: string): Promise<boolean | null> {
+    if (!email) {
+      throw new BadRequestException('Email is required');
+    }
 
-    // Optional: implement token blacklist here if desired
-    // For simple logout, no further action needed because JWT is stateless
+    // 1️⃣ Check if user exists
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Enter a valid email.');
+    }
+
+    // 2️⃣ Ensure the provided email matches the logged-in user
+    if (email !== loggedInUserEmail) {
+      throw new ForbiddenException('You can only logout your own account.');
+    }
+
+    // 3️⃣ Clear stored token
+    await this.prisma.user.update({
+      where: { email },
+      data: { currentToken: null },
+    });
+
+    console.log(`User ${email} logged out at ${new Date()}`);
+
     return true;
   }
 
