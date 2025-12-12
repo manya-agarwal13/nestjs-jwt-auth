@@ -56,4 +56,28 @@ export class AuthController {
   async profile(@Request() req: any) {
     return req.user;
   }
+
+  /**
+   * Logout user by access token
+   * @param req - Express request object with user data
+   * @returns Logout confirmation message
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(@Request() req: any) {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return { message: 'No access token provided' };
+    }
+     // JWT payload uses "sub" by convention (see AuthService.login)
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    if (!userId) {
+      return { message: 'Unable to determine user id from token payload' };
+    }
+
+    await this.authService.logout(token, userId);
+
+    return { message: 'Logged out successfully' };
+  }
 }

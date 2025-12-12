@@ -95,6 +95,21 @@ export class AuthService {
 
     return { access_token };
   }
+  
+  /**
+   * Logout user using access token
+   * @param token - JWT access token
+   * @param userId - ID of the user logging out
+   * @returns Boolean indicating logout success
+   */
+  async logout(token: string, userId: number) {
+    // Optional: log logout action
+    console.log(`User ${userId} logged out at ${new Date()}`);
+
+    // Optional: implement token blacklist here if desired
+    // For simple logout, no further action needed because JWT is stateless
+    return true;
+  }
 
   /**
    * Remove sensitive fields from user object
